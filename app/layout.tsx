@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { AnalyticsConsent } from "../components/analytics-consent";
+import { Providers } from "./providers";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -17,7 +19,10 @@ export default function RootLayout({
   return (
     <html lang="nl">
       <body className={`${inter.className} antialiased`}>
-        {children}
+        <Providers>
+          {children}
+          <AnalyticsConsent />
+        </Providers>
       </body>
     </html>
   );
