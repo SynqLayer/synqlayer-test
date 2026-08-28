@@ -161,13 +161,9 @@ export function captureMinimalPageview(consent: PostHogConsentChoice) {
   }
 
   lastCapturedPageviewKey = pageviewKey;
-  posthog.capture(
-    "$pageview",
-    {
-      $current_url: `${window.location.origin}${pagePath}`,
-    },
-    { send_instantly: true, transport: "fetch" },
-  );
+  posthog.capture("$pageview", {
+    $current_url: `${window.location.origin}${pagePath}`,
+  });
 }
 
 export { posthog };

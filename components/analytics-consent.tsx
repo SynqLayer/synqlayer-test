@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   captureMinimalPageview,
   ensurePostHogStarted,
@@ -11,12 +11,28 @@ import {
 } from "../lib/posthog-config";
 
 function readConsentChoice(): PostHogConsentChoice | null {
-  if (typeof window === "undefined") {
+  try {
+    const value = globalThis.localStorage?.getItem(POSTHOG_CONSENT_STORAGE_KEY);
+    return value === "accepted" || value === "rejected" ? value : null;
+  } catch {
     return null;
   }
+}
 
-  const value = window.localStorage.getItem(POSTHOG_CONSENT_STORAGE_KEY);
-  return value === "accepted" || value === "rejected" ? value : null;
+const CONSENT_CHANGE_EVENT = "synqlayer-posthog-consent-change";
+
+function subscribeToConsentChanges(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(CONSENT_CHANGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(CONSENT_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function getServerConsentSnapshot() {
+  return null;
 }
 
 function applyConsentChoice(consent: PostHogConsentChoice) {
@@ -30,25 +46,25 @@ function applyConsentChoice(consent: PostHogConsentChoice) {
     posthog.opt_out_capturing();
   }
 
-  window.setTimeout(() => captureMinimalPageview(consent), 0);
+  captureMinimalPageview(consent);
 }
 
 export function AnalyticsConsent() {
-  const [choice, setChoice] = useState<PostHogConsentChoice | null>(null);
+  const choice = useSyncExternalStore(
+    subscribeToConsentChanges,
+    readConsentChoice,
+    getServerConsentSnapshot,
+  );
 
   useEffect(() => {
-    const storedChoice = readConsentChoice();
-    setChoice(storedChoice);
-
-    if (POSTHOG_PROJECT_TOKEN && storedChoice) {
-      applyConsentChoice(storedChoice);
+    if (POSTHOG_PROJECT_TOKEN && choice) {
+      applyConsentChoice(choice);
     }
-  }, []);
+  }, [choice]);
 
   function chooseAnalytics(consent: PostHogConsentChoice) {
     window.localStorage.setItem(POSTHOG_CONSENT_STORAGE_KEY, consent);
-    applyConsentChoice(consent);
-    setChoice(consent);
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT));
   }
 
   if (choice || !POSTHOG_PROJECT_TOKEN) {
