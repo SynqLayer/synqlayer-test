@@ -12,7 +12,7 @@ const configVersion = manifest.devDependencies['eslint-config-next']
 
 function securityPatchOrLater(version) {
   const [major, minor, patch] = version.split('.').map(Number)
-  return major === 16 && (minor > 4 || (minor === 4 && patch >= 5))
+  return major === 16 && (minor > 4 || (minor === 4 && patch >= 6))
 }
 
 test('Next and ESLint config are aligned on the supported patched major', () => {
@@ -24,7 +24,10 @@ test('Next and ESLint config are aligned on the supported patched major', () => 
   assert.equal(lock.packages['node_modules/eslint-config-next'].version, nextVersion)
 })
 
-test('image remote host allowlist remains explicit', () => {
+test('image remote protocol, host and path allowlist remain explicit', () => {
   const config = require('../next.config.js')
-  assert.deepEqual(config.images.remotePatterns.map((pattern) => pattern.hostname), ['github.com', 'vercel.com'])
+  assert.deepEqual(config.images.remotePatterns, [
+    { protocol: 'https', hostname: 'github.com', pathname: '/**' },
+    { protocol: 'https', hostname: 'vercel.com', pathname: '/**' },
+  ])
 })
